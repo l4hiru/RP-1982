@@ -1,1 +1,1 @@
-French Census 1982 Code (for sociodemographic variables, shift-share instruments etc.)
+1982 French Census Code (for sociodemographic variables, shift-share instruments etc.)
