@@ -18,9 +18,7 @@ library(plm)          # For panel data models (if needed)
 
 data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("IN", "N", "R", "S", "AD", "M", "TA", "AE100", "DIPC", "SOND", "IRA", "IRA75", "PRA", "IMA", "T")) 
 
-data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "SOND")) 
-
-### REGULARIZATION CHAPTER PROJECT
+data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "SOND")) #Socio-demographic controls
 
 #II) Variables ------------------------------------------
 
@@ -375,13 +373,15 @@ class(data$N)
 #write_parquet(data, "dataRP1982.parquet")
 
 
-### CHERNOBYL CHAPTER PROJECT
+#II) Socio-demographic variables 
 
-#I) Variables 
+#A) French Departments 
 
-freq(data$D) # Metropolitan Departments 
+freq(data$D)
 
-freq(data$CC) # Catégorie de commune 
+#B) Municipality category (Rural vs. Urban)
+
+freq(data$CC) 
 
 data <- data %>%
   mutate(Rural = case_when(
@@ -393,6 +393,8 @@ data <- data %>%
 freq(data$Rural)
 
 sum(data$Rural * data$SOND, na.rm = TRUE)
+
+#C) Diploma 
 
 
 freq(data$DEG)
@@ -421,6 +423,8 @@ data <- data %>%
 
 freq(data$HighEduc)
 
+#D) Labor Market
+
 freq(data$TA)
 
 data <- data %>%
@@ -439,6 +443,8 @@ data <- data %>%
 
 freq(data$Occupied)
 
+#E) Numeric Age 
+
 freq(data$AD)
 
 data$AD <- as.numeric(data$AD)
@@ -446,10 +452,10 @@ data$AD <- as.numeric(data$AD)
 freq(data$AD)
 
 data$Young <- ifelse(data$AD >= 18 & data$AD <= 30, 1, 0)
-data$Young <- ifelse(data$AD >= 18 & data$AD <= 30, 1, 0)
 
 data$Adult <- ifelse(data$AD >= 18, 1, 0)
 
+#F) Socio-professional / Occupation categories 
 
 freq(data$CS)
 
@@ -471,6 +477,7 @@ data <- data %>%
     TRUE ~ 0
   ))
 
+#III) Creation of the (weighted) controls dataset at the departemental level
 
 data_dep <- data %>% 
   group_by(D) %>% 
@@ -484,7 +491,9 @@ data_dep <- data %>%
     ShareWhiteCollar = sum((WhiteCollar == 1) * SOND) / sum((Occupied == 1) * SOND),
     ShareLowEduc = sum((LowEduc == 1) * SOND) / sum((Adult == 1) * SOND),
     ShareMidEduc = sum((MidEduc == 1) * SOND) / sum((Adult == 1) * SOND),
-    ShareHighEduc = um((HighEduc == 1) * SOND) / sum((Adult == 1) * SOND),
+    ShareHighEduc = sum((HighEduc == 1) * SOND) / sum((Adult == 1) * SOND),
   )
 
 sum(data_dep$Population)
+
+write_parquet(data_dep, "data_dep82.parquet")
