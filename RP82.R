@@ -449,15 +449,13 @@ freq(data$AD)
 
 data$AD <- as.numeric(data$AD)
 
-freq(data$AD)
-
 data$Young <- ifelse(data$AD >= 18 & data$AD <= 30, 1, 0)
 
 data$Adult <- ifelse(data$AD >= 18, 1, 0)
 
 #F) Socio-professional / Occupation categories 
 
-freq(data$CS)
+freq(data$CS8)
 
 data <- data %>%
   mutate(Farmer = case_when(
@@ -472,14 +470,29 @@ data <- data %>%
   ))
 
 data <- data %>%
-  mutate(WhiteCollar = case_when(
+  mutate(Worker = case_when( 
+    CS8 %in% c("6") ~ 1, 
+    TRUE ~ 0
+  ))
+
+data <- data %>%
+  mutate(Executive = case_when(
     CS8 %in% c("3") ~ 1, 
     TRUE ~ 0
   ))
 
+data <- data %>%
+  mutate(Inactive = case_when(
+    CS8 %in% c("7", "8") ~ 1, 
+    TRUE ~ 0
+  ))
+
+
+
+
 #III) Creation of the (weighted) controls dataset at the departemental level
 
-data_dep <- data %>% 
+data_dep82 <- data %>% 
   group_by(D) %>% 
   summarise(
     Population = sum(SOND),  # Total department population
