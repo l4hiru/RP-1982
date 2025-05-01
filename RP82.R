@@ -18,7 +18,7 @@ library(plm)          # For panel data models (if needed)
 
 data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("IN", "N", "R", "S", "AD", "M", "TA", "AE100", "DIPC", "SOND", "IRA", "IRA75", "PRA", "IMA", "T")) 
 
-data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "SOND")) #Socio-demographic controls
+data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "AFE", "SOND")) #Socio-demographic controls
 
 #II) Variables ------------------------------------------
 
@@ -489,15 +489,17 @@ data <- data %>%
     TRUE ~ 0
   ))
 
-#H) Enrolled in school 
+#H) Enrolled in Study 
 
 freq(data$AFE)
 
 data <- data %>%
-  mutate(School = case_when(
+  mutate(Study = case_when(
     AFE %in% c("99") ~ 1, 
     TRUE ~ 0
   ))
+
+freq(data$Study)
 
 
 
@@ -513,9 +515,9 @@ data_dep82 <- data %>%
     ExecutiveShare = sum((Executive == 1) * SOND) / sum((Occupied == 1) * SOND),
     WorkerShare = sum((Worker == 1) * SOND) / sum((Occupied == 1) * SOND),
     InactiveShare = sum((Inactive == 1) * SOND) / sum((WorkingAge == 1) * SOND),
-    HighEducShare = sum((HighEduc == 1) * SOND) / sum((Adult == 1) * SOND)
+    HighEducShare = sum((HighEduc == 1) * SOND) / sum((WorkingAge == 1 & Study == 0) * SOND)
   )
 
-sum(data_dep$Population)
+mean(data_dep82$UnemploymentRate)
 
 write_parquet(data_dep82, "data_dep82.parquet")
