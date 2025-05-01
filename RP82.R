@@ -453,6 +453,8 @@ data$Young <- ifelse(data$AD >= 18 & data$AD <= 30, 1, 0)
 
 data$Adult <- ifelse(data$AD >= 18, 1, 0)
 
+data$WorkingAge <- ifelse(data$AD >= 18 & data$AD <= 64, 1, 0)
+
 #F) Socio-professional / Occupation categories 
 
 freq(data$CS8)
@@ -487,6 +489,15 @@ data <- data %>%
     TRUE ~ 0
   ))
 
+#H) Enrolled in school 
+
+freq(data$AFE)
+
+data <- data %>%
+  mutate(School = case_when(
+    AFE %in% c("99") ~ 1, 
+    TRUE ~ 0
+  ))
 
 
 
@@ -495,18 +506,16 @@ data <- data %>%
 data_dep82 <- data %>% 
   group_by(D) %>% 
   summarise(
-    Population = sum(SOND),  # Total department population
-    ShareRural = sum((Rural == 1) * SOND) / sum(SOND), 
-    Unemployment = sum((Unemployed == 1) * SOND) / sum((Unemployed == 1 | Occupied == 1) * SOND),
-    ShareYoung = sum((Young == 1) * SOND) / sum((Adult == 1) * SOND),
-    ShareFarmer = sum((Farmer == 1) * SOND) / sum((Occupied == 1) * SOND),
-    ShareBlueCollar = sum((BlueCollar == 1) * SOND) / sum((Occupied == 1) * SOND),
-    ShareWhiteCollar = sum((WhiteCollar == 1) * SOND) / sum((Occupied == 1) * SOND),
-    ShareLowEduc = sum((LowEduc == 1) * SOND) / sum((Adult == 1) * SOND),
-    ShareMidEduc = sum((MidEduc == 1) * SOND) / sum((Adult == 1) * SOND),
-    ShareHighEduc = sum((HighEduc == 1) * SOND) / sum((Adult == 1) * SOND),
+    RuralShare = sum((Rural == 1) * SOND) / sum(SOND), 
+    UnemploymentRate = sum((Unemployed == 1) * SOND) / sum((Unemployed == 1 | Occupied == 1) * SOND),
+    YoungShare = sum((Young == 1) * SOND) / sum((Adult == 1) * SOND),
+    FarmerShare = sum((Farmer == 1) * SOND) / sum((Occupied == 1) * SOND),
+    ExecutiveShare = sum((Executive == 1) * SOND) / sum((Occupied == 1) * SOND),
+    WorkerShare = sum((Worker == 1) * SOND) / sum((Occupied == 1) * SOND),
+    InactiveShare = sum((Inactive == 1) * SOND) / sum((WorkingAge == 1) * SOND),
+    HighEducShare = sum((HighEduc == 1) * SOND) / sum((Adult == 1) * SOND)
   )
 
 sum(data_dep$Population)
 
-write_parquet(data_dep, "data_dep82.parquet")
+write_parquet(data_dep82, "data_dep82.parquet")
