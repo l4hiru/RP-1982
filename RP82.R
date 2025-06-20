@@ -16,7 +16,7 @@ library(plm)          # For panel data models (if needed)
 
 #RP 1982
 
-data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("IN", "N", "R", "S", "AD", "M", "TA", "AE100", "DIPC", "SOND", "IRA", "IRA75", "PRA", "IMA", "T")) 
+data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("IN", "N", "R", "D", "S", "AD", "M", "TA", "AE100", "DIPC", "SOND", "IRA", "IRA75", "PRA", "IMA", "T")) 
 
 data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "AFE", "SOND")) #Socio-demographic controls
 
@@ -521,3 +521,93 @@ data_dep82 <- data %>%
 mean(data_dep82$UnemploymentRate)
 
 write_parquet(data_dep82, "data_dep82.parquet")
+
+# Immigration / Preferences for redistribution for CREDOC dataset
+
+data <- data %>%
+  mutate(Immigrant = case_when(
+    IN %in% c("20") ~ 1,
+    TRUE ~ 0
+  ))
+
+data <- data %>%
+  mutate(Nationality = recode(N,
+    "01" = "Europe",
+    "02" = "Europe",
+    "03" = "Europe",
+    "04" = "Europe",
+    "05" = "Europe",
+    "06" = "Europe",
+    "07" = "Europe",
+    "08" = "Europe",
+    "09" = "Europe",
+    "10" = "Europe",
+    "11" = "Europe",
+    "12" = "Europe",
+    "13" = "Europe",
+    "14" = "Europe",
+    "15" = "Europe",
+    "16" = "Europe",
+    "17" = "Europe",
+    "18" = "Europe",
+    "19" = "Europe",
+    "20" = "Europe",
+    "21" = "Europe",
+    "22" = "Europe",
+    "23" = "Europe",
+    "24" = "Europe",
+    "25" = "Europe",
+    "29" = "Europe",
+    "31" = "Maghreb",
+    "33" = "Afrique",
+    "34" = "Afrique",
+    "35" = "Afrique",
+    "36" = "Afrique",
+    "37" = "Afrique",
+    "39" = "Afrique",
+    "40" = "Afrique",
+    "42" = "Afrique",
+    "43" = "Afrique",
+    "44" = "Afrique",
+    "45" = "Maghreb",
+    "46" = "Afrique",
+    "47" = "Afrique",
+    "48" = "Afrique",
+    "49" = "Afrique",
+    "50" = "Afrique",
+    "51" = "Afrique",
+    "52" = "Maghreb",
+    "53" = "Afrique",
+    "54" = "Afrique",
+    "55" = "Afrique",
+    "56" = "Afrique",
+    "57" = "Afrique",
+    "59" = "Afrique",
+    "60" = "AmNord",
+    "61" = "AmNord",
+    "62" = "AmNord",
+    "63" = "AmSud",
+    "64" = "AmSud",
+    "65" = "AmSud",
+    "66" = "AmSud",
+    "67" = "AmSud",
+    "68" = "AmSud",
+    "69" = "AmSud",
+    "70" = "Asie",
+    "71" = "Asie",
+    "72" = "Asie",
+    "73" = "Asie",
+    "74" = "Asie",
+    "75" = "Asie",
+    "76" = "Asie",
+    "77" = "Asie",
+    "78" = "Asie",
+    "79" = "Asie",
+    "80" = "Turquie",
+    "81" = "Asie",
+    "82" = "Asie",
+    "83" = "Asie",
+    "84" = "Asie",
+    "85" = "URSS",
+    "86" = "Océanie",
+    "89" = "Océanie" ))
