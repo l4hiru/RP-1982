@@ -1,4 +1,4 @@
-#RP 1982
+#RP 1982 (INSEE)
 
 #O) Packages 
 
@@ -20,7 +20,192 @@ data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("IN", "N", "R", 
 
 data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("AU", "CC", "CCR", "D", "R", "AD", "TA", "AE3", "AE100", "CS", "CS8", "DIPC", "DIP", "DEG", "AFE", "SOND")) #Socio-demographic controls
 
+data_1982 <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("D", "IN", "N", "DIPC", "SOND"))  # Shift for the shift-share IV (Edo et al. 2019)
+
 #II) Variables ------------------------------------------
+
+#A) Nationality 
+
+freq(data_1982$IN)
+
+data_1982 <- data_1982 %>%
+  mutate(Nationality = recode(IN,
+         "11" = "Native",
+         "12" = "Naturalized",
+         "20" = "Immigrant"))
+
+freq(data_1982$Nationality)
+
+#B) Diploma 
+
+data_1982 <- data_1982 %>%
+  mutate(Diploma = case_when(
+    DIPC == "*" ~ NA_character_,  # < 15 yo, N.A
+    DIPC %in% c("0") ~ "Low",  # No diploma, CEP, DFEO, etc.
+    DIPC %in% c("1", "2") ~ "Mid",  # BEPC, BEP, CAP, etc.
+    DIPC %in% c("3", "4", "5") ~ "High",  # BAC or more
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(Diploma = factor(Diploma, levels = c("Low", "Mid", "High")))
+
+#C) Origin 
+
+freq(data_1982$Origin)
+
+data_1982 <- data_1982 %>%
+  mutate(Origin = recode(N,
+    "01" = "Europe",
+    "02" = "Europe",
+    "03" = "Europe",
+    "04" = "East_Europe",
+    "05" = "Europe",
+    "06" = "South_Europe",
+    "07" = "Europe",
+    "08" = "Europe",
+    "09" = "East_Europe",
+    "10" = "Europe",
+    "11" = "South_Europe",
+    "12" = "Europe",
+    "13" = "Europe",
+    "14" = "Europe",
+    "15" = "East_Europe",
+    "16" = "South_Europe",
+    "17" = "East_Europe",
+    "18" = "Europe",
+    "19" = "Europe",
+    "20" = "Europe",
+    "21" = "East_Europe",
+    "22" = "East_Europe",
+    "23" = "Europe",
+    "24" = "Europe",
+    "25" = "East_Europe",
+    "29" = "East_Europe",
+    "31" = "Maghreb",
+    "33" = "Africa",
+    "34" = "Africa",
+    "35" = "Africa",
+    "36" = "Africa",
+    "37" = "Africa",
+    "39" = "Africa",
+    "40" = "Africa",
+    "42" = "Africa",
+    "43" = "Africa",
+    "44" = "Africa",
+    "45" = "Maghreb",
+    "46" = "Africa",
+    "47" = "Africa",
+    "48" = "Africa",
+    "49" = "Africa",
+    "50" = "Africa",
+    "51" = "Africa",
+    "52" = "Maghreb",
+    "53" = "Africa",
+    "54" = "Africa",
+    "55" = "Africa",
+    "56" = "Africa",
+    "57" = "Africa",
+    "59" = "Africa",
+    "60" = "North_America",
+    "61" = "North_America",
+    "62" = "North_America",
+    "63" = "South_America",
+    "64" = "South_America",
+    "65" = "South_America",
+    "66" = "South_America",
+    "67" = "South_America",
+    "68" = "South_America",
+    "69" = "South_America",
+    "70" = "Asia",
+    "71" = "Asia",
+    "72" = "Asia",
+    "73" = "Asia",
+    "74" = "Asia",
+    "75" = "Asia",
+    "76" = "Asia",
+    "77" = "Asia",
+    "78" = "Asia",
+    "79" = "Asia",
+    "80" = "Asia",
+    "81" = "Asia",
+    "82" = "Asia",
+    "83" = "Asia",
+    "84" = "Asia",
+    "85" = "Asia",
+    "86" = "Asia",
+    "89" = "Asia" ))
+
+#III) Shifts in 1982
+
+#A) Immigrant
+
+immi_1982 <- data_1982 %>%
+  filter(Nationality == "Immigrant") %>%
+  group_by(Origin, Diploma) %>%
+  summarise(
+    total_imm_1982 = sum(SOND, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(
+    Origin_group = Origin
+  )
+
+#B) Native
+
+native_1982 <- data_1982 %>%
+  filter(Nationality == "Native") %>%
+  group_by(Diploma) %>%
+  summarise(
+    total_native_1982 = sum(SOND, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#C) Naturalize
+
+naturalized_1982 <- data_1982 %>%
+  filter(Nationality == "Naturalized") %>%
+  group_by(Diploma) %>%
+  summarise(
+    total_naturalized_1982 = sum(SOND, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#D) Pooled shift
+
+shift_1982 <- bind_rows(
+  immi_1982 %>%
+    mutate(
+      Nationality = "Immigrant",
+      Year = as.factor(1982),
+      Count = total_imm_1982
+    ) %>%
+    select(Nationality, Origin_group, Diploma, Count, Year),
+
+  native_1982 %>%
+    mutate(
+      Nationality = "Native",
+      Origin_group = "French",
+      Year = as.factor(1982),
+      Count = total_native_1982
+    ) %>%
+    select(Nationality, Origin_group, Diploma, Count, Year),
+
+  naturalized_1982 %>%
+    mutate(
+      Nationality = "Naturalized",
+      Origin_group = "French",
+      Year = as.factor(1982),
+      Count = total_naturalized_1982
+    ) %>%
+    select(Nationality, Origin_group, Diploma, Count, Year)
+)
+
+sum(shift_1982$Count)
+
+write_parquet(shift_1982, "shift_1982.parquet")
+
+###
+
+
 
 #Pondération (SOND)
 
@@ -130,55 +315,55 @@ data <- data %>%
     "25" = "Europe",
     "29" = "Europe",
     "31" = "Maghreb",
-    "33" = "Afrique",
-    "34" = "Afrique",
-    "35" = "Afrique",
-    "36" = "Afrique",
-    "37" = "Afrique",
-    "39" = "Afrique",
-    "40" = "Afrique",
-    "42" = "Afrique",
-    "43" = "Afrique",
-    "44" = "Afrique",
+    "33" = "Africa",
+    "34" = "Africa",
+    "35" = "Africa",
+    "36" = "Africa",
+    "37" = "Africa",
+    "39" = "Africa",
+    "40" = "Africa",
+    "42" = "Africa",
+    "43" = "Africa",
+    "44" = "Africa",
     "45" = "Maghreb",
-    "46" = "Afrique",
-    "47" = "Afrique",
-    "48" = "Afrique",
-    "49" = "Afrique",
-    "50" = "Afrique",
-    "51" = "Afrique",
+    "46" = "Africa",
+    "47" = "Africa",
+    "48" = "Africa",
+    "49" = "Africa",
+    "50" = "Africa",
+    "51" = "Africa",
     "52" = "Maghreb",
-    "53" = "Afrique",
-    "54" = "Afrique",
-    "55" = "Afrique",
-    "56" = "Afrique",
-    "57" = "Afrique",
-    "59" = "Afrique",
-    "60" = "AmNord",
-    "61" = "AmNord",
-    "62" = "AmNord",
-    "63" = "AmSud",
-    "64" = "AmSud",
-    "65" = "AmSud",
-    "66" = "AmSud",
-    "67" = "AmSud",
-    "68" = "AmSud",
-    "69" = "AmSud",
-    "70" = "Asie",
-    "71" = "Asie",
-    "72" = "Asie",
-    "73" = "Asie",
-    "74" = "Asie",
-    "75" = "Asie",
-    "76" = "Asie",
-    "77" = "Asie",
-    "78" = "Asie",
-    "79" = "Asie",
+    "53" = "Africa",
+    "54" = "Africa",
+    "55" = "Africa",
+    "56" = "Africa",
+    "57" = "Africa",
+    "59" = "Africa",
+    "60" = "North_America",
+    "61" = "North_America",
+    "62" = "North_America",
+    "63" = "South_America",
+    "64" = "South_America",
+    "65" = "South_America",
+    "66" = "South_America",
+    "67" = "South_America",
+    "68" = "South_America",
+    "69" = "South_America",
+    "70" = "Asia",
+    "71" = "Asia",
+    "72" = "Asia",
+    "73" = "Asia",
+    "74" = "Asia",
+    "75" = "Asia",
+    "76" = "Asia",
+    "77" = "Asia",
+    "78" = "Asia",
+    "79" = "Asia",
     "80" = "Turquie",
-    "81" = "Asie",
-    "82" = "Asie",
-    "83" = "Asie",
-    "84" = "Asie",
+    "81" = "Asia",
+    "82" = "Asia",
+    "83" = "Asia",
+    "84" = "Asia",
     "85" = "URSS",
     "86" = "Océanie",
     "89" = "Océanie" ))
@@ -187,7 +372,7 @@ freq(data$Nationality)
 
 data <- data %>%
   mutate(NatRegularized = case_when(
-    Nationality %in% c("Portugais", "Espagnols", "Maghreb", "Afrique", "Turquie") ~ 1,
+    Nationality %in% c("Portugais", "Espagnols", "Maghreb", "Africa", "Turquie") ~ 1,
     TRUE ~ 0
   ))
 
@@ -559,55 +744,57 @@ data <- data %>%
     "25" = "Europe",
     "29" = "Europe",
     "31" = "Maghreb",
-    "33" = "Afrique",
-    "34" = "Afrique",
-    "35" = "Afrique",
-    "36" = "Afrique",
-    "37" = "Afrique",
-    "39" = "Afrique",
-    "40" = "Afrique",
-    "42" = "Afrique",
-    "43" = "Afrique",
-    "44" = "Afrique",
+    "33" = "Africa",
+    "34" = "Africa",
+    "35" = "Africa",
+    "36" = "Africa",
+    "37" = "Africa",
+    "39" = "Africa",
+    "40" = "Africa",
+    "42" = "Africa",
+    "43" = "Africa",
+    "44" = "Africa",
     "45" = "Maghreb",
-    "46" = "Afrique",
-    "47" = "Afrique",
-    "48" = "Afrique",
-    "49" = "Afrique",
-    "50" = "Afrique",
-    "51" = "Afrique",
+    "46" = "Africa",
+    "47" = "Africa",
+    "48" = "Africa",
+    "49" = "Africa",
+    "50" = "Africa",
+    "51" = "Africa",
     "52" = "Maghreb",
-    "53" = "Afrique",
-    "54" = "Afrique",
-    "55" = "Afrique",
-    "56" = "Afrique",
-    "57" = "Afrique",
-    "59" = "Afrique",
-    "60" = "AmNord",
-    "61" = "AmNord",
-    "62" = "AmNord",
-    "63" = "AmSud",
-    "64" = "AmSud",
-    "65" = "AmSud",
-    "66" = "AmSud",
-    "67" = "AmSud",
-    "68" = "AmSud",
-    "69" = "AmSud",
-    "70" = "Asie",
-    "71" = "Asie",
-    "72" = "Asie",
-    "73" = "Asie",
-    "74" = "Asie",
-    "75" = "Asie",
-    "76" = "Asie",
-    "77" = "Asie",
-    "78" = "Asie",
-    "79" = "Asie",
+    "53" = "Africa",
+    "54" = "Africa",
+    "55" = "Africa",
+    "56" = "Africa",
+    "57" = "Africa",
+    "59" = "Africa",
+    "60" = "North_America",
+    "61" = "North_America",
+    "62" = "North_America",
+    "63" = "South_America",
+    "64" = "South_America",
+    "65" = "South_America",
+    "66" = "South_America",
+    "67" = "South_America",
+    "68" = "South_America",
+    "69" = "South_America",
+    "70" = "Asia",
+    "71" = "Asia",
+    "72" = "Asia",
+    "73" = "Asia",
+    "74" = "Asia",
+    "75" = "Asia",
+    "76" = "Asia",
+    "77" = "Asia",
+    "78" = "Asia",
+    "79" = "Asia",
     "80" = "Turquie",
-    "81" = "Asie",
-    "82" = "Asie",
-    "83" = "Asie",
-    "84" = "Asie",
+    "81" = "Asia",
+    "82" = "Asia",
+    "83" = "Asia",
+    "84" = "Asia",
     "85" = "URSS",
     "86" = "Océanie",
     "89" = "Océanie" ))
+
+freq(data$D)
