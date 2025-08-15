@@ -17,7 +17,7 @@ library(COGugaison)
 
 #RP 1982
 
-data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("D", "C", "AE100", "AE600", "SOND"))
+data <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("D", "C", "AE100", "AE600", "TA", "SOND"))
 
 # II) Variables 
 
@@ -47,8 +47,11 @@ data_commune <- data %>%
   group_by(code_commune) %>% 
   summarise(
     pop_totale = sum(SOND, na.rm = TRUE),
-    pop_elec = sum(SOND[AE100 == "06"], na.rm = TRUE)
+    pop_elec = sum(SOND[AE100 == "06"], na.rm = TRUE),
+    pop_employment = sum(SOND[TA == "1"], na.rm = TRUE)
   ) %>% 
-  mutate(share_elec = pop_elec / pop_totale)
+  mutate(share_elec = pop_elec / pop_employment)
+
+summary(data_commune$share_elec)
 
 write_parquet(data_commune, "share_elec82.parquet")
