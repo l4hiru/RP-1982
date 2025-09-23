@@ -143,7 +143,18 @@ immi_1982 <- data_1982 %>%
     .groups = "drop"
   )
 
+shift_1982 <- data_1982 %>%
+  filter(!is.na(Diploma)) %>%
+  mutate(
+    Origin = ifelse(Nationality %in% c("Native", "Naturalized"), "French", Origin)
+  ) %>%
+  group_by(Nationality, Origin, Diploma) %>%
+  summarise(
+    shift = sum(SOND, na.rm = TRUE),
+    .groups = "drop"
+  )
+
 #III) Final dataset
 
 #write_parquet(immi_1982, "immi_shift82_11nat.parquet")
-write_parquet(immi_1982, "immi_shift82_11nat_dipp.parquet")
+write_parquet(shift_1982, "shift82_11nat_dipp.parquet")
