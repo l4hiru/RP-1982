@@ -12,7 +12,7 @@ library(plm)          # For panel data models (if needed)
 
 #I) Dataset
 
-data_1982 <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("D", "IN", "N", "SOND"))  # Shift for the shift-share IV (Edo et al. 2019)
+data_1982 <- read_sas("verdugo_rp82_fdq_10.sas7bdat", col_select = c("D", "IN", "N", "DIPC", "SOND"))  # Shift for the shift-share IV (Edo et al. 2019)
 
 #II) Variables ----------------------------------------
 
@@ -116,16 +116,34 @@ data_1982 <- data_1982 %>%
 
 freq(data_1982$Origin)
 
+# C) Diploma 
+
+freq(data_1982$DIPC)
+
+data_1982 <- data_1982 %>%
+  mutate(Diploma = case_when(
+    DIPC == "*" ~ NA_character_,  # < 15 yo, N.A
+    DIPC %in% c("0") ~ "Low",  # No diploma, CEP, DFEO, etc.
+    DIPC %in% c("1", "2") ~ "Mid",  # BEPC, BEP, CAP, etc.
+    DIPC %in% c("3", "4", "5") ~ "High",  # BAC or more
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(Diploma = factor(Diploma, levels = c("Low", "Mid", "High")))
+
+freq(data_1982$Diploma)
+
+
 #II) Shift 
 
 immi_1982 <- data_1982 %>%
-  filter(Nationality == "Immigrant") %>%
-  group_by(Origin) %>%
+  filter(Nationality == "Immigrant", !is.na(Diploma)) %>%   # on élimine les NA de Diploma
+  group_by(Origin, Diploma) %>%                            # groupement par origine ET diplôme
   summarise(
-    shift_immi_1982 = sum(SOND, na.rm = TRUE),
+    immi_shift = sum(SOND, na.rm = TRUE),
     .groups = "drop"
   )
 
 #III) Final dataset
 
-write_parquet(immi_1982, "immi_shift82_11nat.parquet")
+#write_parquet(immi_1982, "immi_shift82_11nat.parquet")
+write_parquet(immi_1982, "immi_shift82_11nat_dipp.parquet")
