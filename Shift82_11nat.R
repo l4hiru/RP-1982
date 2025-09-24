@@ -132,6 +132,25 @@ data_1982 <- data_1982 %>%
 
 freq(data_1982$Diploma)
 
+# D) Departemental immigration share
+
+data_1982$Departement <- data_1982$D
+
+freq(data_1982$Nationality)
+freq(data_1982$Departement)
+
+immi_dep <- data_1982 %>%
+  group_by(Departement) %>%
+  summarise(
+    total_immi = sum(SOND[Nationality == "Immigrant"], na.rm = TRUE),
+    total_pop = sum(SOND, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(share_immi = total_immi / total_pop)
+
+freq(immi_dep$share_immi)
+mean(immi_dep$share_immi)
+sum(immi_dep$total_immi)
 
 #II) Shift 
 
@@ -158,3 +177,4 @@ shift_1982 <- data_1982 %>%
 
 #write_parquet(immi_1982, "immi_shift82_11nat.parquet")
 write_parquet(shift_1982, "shift82_11nat_dipp.parquet")
+write_parquet(immi_dep, "immi_dep_share1982.parquet")
