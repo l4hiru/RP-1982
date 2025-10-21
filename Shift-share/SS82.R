@@ -239,3 +239,106 @@ immi_share82 <- read_parquet("Shift-share/immi_share82.parquet")
 native_share82 <- read_parquet("Shift-share/native_share82.parquet")
 naturalized_share82 <- read_parquet("Shift-share/naturalized_share82.parquet")
 
+# B) Subsequent Shifts
+
+shift_1982 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_1982_11nat_dipp.parquet")
+shift_1990 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_1990_11nat_dipp.parquet")
+shift_1999 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_1999_11nat_dipp.parquet")
+#shift_2000 <- read_parquet("Shift-share/Shift/shift_2000_11nat_dipp.parquet")
+shift_2005 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_2005_11nat_dipp.parquet") 
+shift_2010 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_2010_11nat_dipp.parquet")
+shift_2015 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_2015_11nat_dipp.parquet") %>% filter(Nationality != "")
+shift_2020 <- read_parquet("C:/Users/srimling/Documents/Positron/RP/RP 1975/Shift-share/Shift/shift_2020_11nat_dipp.parquet")
+
+# II) Construction of the shift-share IV 
+
+# A) Numerator 
+
+years <- c(1982, 1990, 1999, 2005, 2010, 2015, 2020)
+
+numerator <- map_dfr(years, function(y) {
+  base <- immi_share82 %>%
+    mutate(Nationality = "Immigrant") %>%
+    left_join(get(paste0("shift_", y)), 
+              by = c("Nationality", "Origin", "Diploma")) %>%
+    mutate(immi_pred = immi_share * shift)
+
+  # total
+  total <- base %>%
+    group_by(Departement) %>%
+    summarise(immi_pred = sum(immi_pred, na.rm = TRUE), .groups = "drop")
+
+  # par diplôme
+  by_diploma <- base %>%
+    group_by(Departement, Diploma) %>%
+    summarise(immi_pred = sum(immi_pred, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(
+      names_from = Diploma,
+      values_from = immi_pred,
+      names_prefix = "immi_pred_",
+      values_fill = 0
+    )
+
+  # par origine
+  by_origin <- base %>%
+    group_by(Departement, Origin) %>%
+    summarise(immi_pred = sum(immi_pred, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(
+      names_from = Origin,
+      values_from = immi_pred,
+      names_prefix = "immi_pred_",
+      values_fill = 0
+    )
+
+  # fusion + ajout année
+  total %>%
+    left_join(by_diploma, by = "Departement") %>%
+    left_join(by_origin, by = "Departement") %>%
+    mutate(Year = as.factor(y))
+})
+
+numerator <- numerator %>%
+  mutate(
+    immi_pred_Maghreb = immi_pred_Algeria + immi_pred_Morocco + immi_pred_Tunisia,
+    immi_pred_South_Europe = immi_pred_Italy + immi_pred_Spain + immi_pred_Portugal
+  )
+
+# B) Denominator
+
+denominator <- map_dfr(years, function(y) {
+  # immigrants
+  base_immi <- immi_share82 %>%
+    mutate(Nationality = "Immigrant") %>%
+    left_join(get(paste0("shift_", y)), 
+              by = c("Nationality", "Origin", "Diploma")) %>%
+    mutate(pred_immi = immi_share * shift) %>%
+    group_by(Departement) %>%
+    summarise(immi_pred = sum(pred_immi, na.rm = TRUE), .groups = "drop")
+
+  # natifs
+  base_native <- native_share82 %>%
+    mutate(Nationality = "Native") %>%
+    left_join(get(paste0("shift_", y)), 
+              by = c("Nationality", "Origin", "Diploma")) %>%
+    mutate(pred_native = native_share * shift) %>%
+    group_by(Departement) %>%
+    summarise(native_pred = sum(pred_native, na.rm = TRUE), .groups = "drop")
+
+  # naturalisés
+  base_nat <- naturalized_share82 %>%
+    mutate(Nationality = "Naturalized") %>%
+    left_join(get(paste0("shift_", y)), 
+              by = c("Nationality", "Origin", "Diploma")) %>%
+    mutate(naturalized_pred = naturalized_share * shift) %>%
+    group_by(Departement) %>%
+    summarise(naturalized_pred = sum(naturalized_pred, na.rm = TRUE), .groups = "drop")
+
+  # fusion des trois
+  total <- base_immi %>%
+    left_join(base_native, by = "Departement") %>%
+    left_join(base_nat, by = "Departement") %>%
+    mutate(
+      pop_pred = immi_pred + native_pred + naturalized_pred,
+      Year = as.factor(y)
+    )
+})
